@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kth.job.JobMapper">
+
+	<insert id="insertJobQueue" parameterType="hashmap">
+		INSERT INTO
+		`gateway`.`job_queue`
+		(
+		`file_name`,
+		`status`
+		)
+		VALUES
+		(
+		#{file_name},
+		0
+		)
+	</insert>
+
+	<update id="updateJobQueue" parameterType="hashmap">
+		UPDATE
+		`gateway`.`job_queue`
+		SET
+		`status` = 1
+		WHERE `job_queue`.`seq`= ${seq}
+	</update>
+
+	<select id="selectJobQueueList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT
+		`job_queue`.`seq`,
+		`job_queue`.`file_name`,
+		`job_queue`.`status`,
+		`job_queue`.`cdate`
+		FROM `gateway`.`job_queue`
+
+		<where>
+			`job_queue`.`status` = 0
+			<if test="file_name!=null">
+				and `job_queue`.`file_name` =
+				#{file_name}
+			</if>
+		</where>
+		
+		order by `job_queue`.`file_name` asc
+	</select>
+
+	<select id="selectJobQueueCount" parameterType="hashmap"
+		resultType="int">
+		SELECT
+		count(*) as cnt
+		FROM `gateway`.`job_queue`
+
+		<where>
+			<if test="file_name!=null">
+				`job_queue`.`file_name` = #{file_name}
+			</if>
+		</where>
+	</select>
+
+
+
+
+	<select id="selectKTISList" parameterType="hashmap" resultType="hashmap">
+		SELECT
+		`ktis`.`iud`,
+		`ktis`.`sysdate`,
+		`ktis`.`pubname`,
+		`ktis`.`part1`,
+		`ktis`.`part2`,
+		`ktis`.`part3`,
+		`ktis`.`part4`,
+		`ktis`.`addr_detail`,
+		`ktis`.`b_code`,
+		`ktis`.`b_name`,
+		`ktis`.`addr_type`,
+		`ktis`.`bunji`,
+		`ktis`.`ho`,
+		`ktis`.`tel`,
+		`ktis`.`yp`,
+		`ktis`.`sese_name`,
+		`ktis`.`calllink_gubun1`,
+		`ktis`.`calllink_gubun2`
+		FROM `gateway`.`ktis`
+
+		<where>
+			<if test="tel!=null">
+				tel = #{tel}
+			</if>
+		</where>
+	</select>
+
+	<select id="selectKTISCount" parameterType="hashmap" resultType="int">
+		SELECT
+		count(*)as cnt  
+		FROM `gateway`.`ktis`
+		<where>
+			<if test="tel!=null">
+				tel = #{tel}
+			</if>
+		</where>
+	</select>
+
+	<insert id="insertKTIS" parameterType="hashmap">
+		INSERT INTO
+		`gateway`.`ktis`
+		(`iud`,
+		`sysdate`,
+		`pubname`,
+		`part1`,
+		`part2`,
+		`part3`,
+		`part4`,
+		`addr_detail`,
+		`b_code`,
+		`b_name`,
+		`addr_type`,
+		`bunji`,
+		`ho`,
+		`tel`,
+		`yp`,
+		`sese_name`,
+		`calllink_gubun1`,
+		`calllink_gubun2`)
+		VALUES
+		(
+		#{iud},
+		#{sysdate},
+		#{pubname},
+		#{part1},
+		#{part2},
+		#{part3},
+		#{part4},
+		#{addr_detail},
+		#{b_code},
+		#{b_name},
+		#{addr_type},
+		#{bunji},
+		#{ho},
+		#{tel},
+		#{yp},
+		#{sese_name},
+		#{calllink_gubun1},
+		#{calllink_gubun2}
+		);
+
+	</insert>
+
+	<update id="updateKTIS" parameterType="hashmap">
+		UPDATE `gateway`.`ktis`
+		SET
+		`iud` = #{iud},
+		`sysdate` = #{sysdate},
+		`pubname` = #{pubname},
+		`part1` = #{part1},
+		`part2` = #{part2},
+		`part3` = #{part3},
+		`part4` = #{part4},
+		`addr_detail` = #{addr_detail},
+		`b_code` = #{b_code},
+		`b_name` = #{b_name},
+		`addr_type` = #{addr_type},
+		`bunji` = #{bunji},
+		`ho` = #{ho},
+		`tel` = #{tel},
+		`yp` = #{yp},
+		`sese_name` = #{sese_name},
+		`calllink_gubun1` = #{calllink_gubun1},
+		`calllink_gubun2` = #{calllink_gubun2}
+		WHERE tel = #{tel};
+	</update>
+
+</mapper>
