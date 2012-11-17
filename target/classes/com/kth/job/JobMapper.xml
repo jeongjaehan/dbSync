@@ -6,7 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 	<insert id="insertJobQueue" parameterType="hashmap">
 		INSERT INTO
-		`gateway`.`job_queue`
+		`gateway`.`ktis_job_queue`
 		(
 		`file_name`,
 		`status`
@@ -20,41 +20,41 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 	<update id="updateJobQueue" parameterType="hashmap">
 		UPDATE
-		`gateway`.`job_queue`
+		`gateway`.`ktis_job_queue`
 		SET
 		`status` = 1
-		WHERE `job_queue`.`seq`= ${seq}
+		WHERE `ktis_job_queue`.`seq`= ${seq}
 	</update>
 
 	<select id="selectJobQueueList" parameterType="hashmap"
 		resultType="hashmap">
 		SELECT
-		`job_queue`.`seq`,
-		`job_queue`.`file_name`,
-		`job_queue`.`status`,
-		`job_queue`.`cdate`
-		FROM `gateway`.`job_queue`
+		`ktis_job_queue`.`seq`,
+		`ktis_job_queue`.`file_name`,
+		`ktis_job_queue`.`status`,
+		`ktis_job_queue`.`cdate`
+		FROM `gateway`.`ktis_job_queue`
 
 		<where>
-			`job_queue`.`status` = 0
+			`ktis_job_queue`.`status` = 0
 			<if test="file_name!=null">
-				and `job_queue`.`file_name` =
+				and `ktis_job_queue`.`file_name` =
 				#{file_name}
 			</if>
 		</where>
 		
-		order by `job_queue`.`file_name` asc
+		order by `ktis_job_queue`.`file_name` asc
 	</select>
 
 	<select id="selectJobQueueCount" parameterType="hashmap"
 		resultType="int">
 		SELECT
 		count(*) as cnt
-		FROM `gateway`.`job_queue`
+		FROM `gateway`.`ktis_job_queue`
 
 		<where>
 			<if test="file_name!=null">
-				`job_queue`.`file_name` = #{file_name}
+				`ktis_job_queue`.`file_name` = #{file_name}
 			</if>
 		</where>
 	</select>

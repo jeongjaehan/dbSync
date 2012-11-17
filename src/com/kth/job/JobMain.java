@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -14,17 +13,31 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.log4j.Logger;
 
-public class GoJob {
-	public static final String ktis_db_path = "D:/test/"; // ktis db 파일이 존재하는 디렉토리 패스
-	public static final String ktis_backup_path = ktis_db_path+"backup/"; 
-	public static final  String mybatis_path = "com/kth/job/MybatisConfig.xml"; // mybatis config 패스
+public class JobMain {
+	private String ktis_db_path = ""; 
+	private String ktis_backup_path = ""; 
+	private String mybatis_path = ""; // mybatis 설정 class path 
+	
 	private Logger log = Logger.getLogger(this.getClass());
+	
+	
+	public JobMain() {
+		if(System.getProperty("os.name").toUpperCase().startsWith("WINDOW")){ // 테스트
+			this.ktis_db_path = "D:/test/"; 	
+			this.mybatis_path = "com/kth/job/MybatisConfig-test.xml"; 
+		}else{	// 상용
+			this.ktis_db_path = "/DATA/ktis/"; 
+			this.mybatis_path = "com/kth/job/MybatisConfig.xml"; 
+		}
+		
+		this.ktis_backup_path = this.ktis_db_path+"backup/";
+	}
 
 	public SqlSession getSessionFactory(){
 		SqlSession session = null;
 
 		try {
-			Reader reader = Resources.getResourceAsReader(mybatis_path);
+			Reader reader = Resources.getResourceAsReader(this.mybatis_path);
 			SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(reader);
 			session = sqlSessionFactory.openSession();
 			return session;
@@ -37,8 +50,8 @@ public class GoJob {
 
 	public int executeTask(){
 
-//		File ktisFiles = readKtisDBFiles();
-//		pushJOB(ktisFiles);
+		File ktisFiles = readKtisDBFiles();
+		pushJOB(ktisFiles);
 		LinkedList<HashMap> jobList = popJOBList();
 		syncKtisDB(jobList);
 
@@ -63,8 +76,11 @@ public class GoJob {
 		JobMapper jobMapper = session.getMapper(JobMapper.class);
 
 		for (String fileName : fileList) {
-
-			if(fileName.startsWith("kt_") && fileName.endsWith(".txt")){ // ktis 파일인 것들만 작업목록에 등록한다.
+			
+			// ktis 파일 체크 subfix && prefix check
+			boolean checkKTISFile = fileName.startsWith("kt_gis_iud") && fileName.endsWith(".txt");
+			
+			if(checkKTISFile){ // ktis 현행화 파일인것들만 작업목록에 등록한다.
 				HashMap<String,String> params = new HashMap<String, String>();
 				String absolutePath = ktis_db_path+fileName;
 				params.put("file_name", absolutePath);
@@ -100,15 +116,6 @@ public class GoJob {
 		return jobList;
 	}
 	
-	
-	class RunSyncKTISDB implements Runnable{
-
-		@Override
-		public void run() {
-			
-		}
-		
-	}
 
 	/**
 	 * 파일에서 한라인씩 읽어 ktis DB현행화
@@ -191,7 +198,7 @@ public class GoJob {
 				completeJOB(map);	//  작업완료시 잡의 상태를 완료상태로 변경 or 파일 백업 디렉토리로 이동 
 
 				session.commit();
-				session.close();
+//				session.close();
 				
 				long endTime = System.currentTimeMillis();
 				
@@ -199,7 +206,6 @@ public class GoJob {
 
 			}
 
-			System.exit(1);
 		}
 	}
 
@@ -232,7 +238,7 @@ public class GoJob {
 	}
 
 	public static void main(String[] args)throws Exception {
-		GoJob job = new GoJob();
+		JobMain job = new JobMain();
 		job.executeTask();
 	}
 }
