@@ -16,18 +16,21 @@ import org.apache.log4j.Logger;
 public class JobMain {
 	private String ktis_db_path = ""; 
 	private String ktis_backup_path = ""; 
-	private String mybatis_path = ""; // mybatis 설정 class path 
+	private String mybatis_path = ""; // mybatis class path 
 	
 	private Logger log = Logger.getLogger(this.getClass());
 	
 	
 	public JobMain() {
-		if(System.getProperty("os.name").toUpperCase().startsWith("WINDOW")){ // 테스트
+		if(System.getProperty("os.name").toUpperCase().startsWith("WINDOW")){
 			this.ktis_db_path = "D:/test/"; 	
 			this.mybatis_path = "com/kth/job/MybatisConfig-test.xml"; 
-		}else{	// 상용
-			this.ktis_db_path = "/DATA/ktis/"; 
+		}else{
+//			this.ktis_db_path = "/DATA/ktis/"; 
+//			this.mybatis_path = "com/kth/job/MybatisConfig.xml";
+			this.ktis_db_path = "/home/kakaruto/test/syncKtis/data/"; 
 			this.mybatis_path = "com/kth/job/MybatisConfig.xml"; 
+
 		}
 		
 		this.ktis_backup_path = this.ktis_db_path+"backup/";
@@ -49,26 +52,24 @@ public class JobMain {
 
 
 	public int executeTask(){
-
-		File ktisFiles = readKtisDBFiles();
-		pushJOB(ktisFiles);
-		LinkedList<HashMap> jobList = popJOBList();
-		syncKtisDB(jobList);
+		try {
+			File ktisFiles = readKtisDBFiles();
+			pushJOB(ktisFiles);
+			LinkedList<HashMap> jobList = popJOBList();
+			syncKtisDB(jobList);
+		} catch (Exception e) {
+			log.warn(e,e);
+		}
 
 		return 1;
 	}
 
-	/**
-	 * ktisDB파일 반환
-	 */
+
 	public File readKtisDBFiles(){
 		File file = new File(ktis_db_path);
 		return file;
 	}
 
-	/**
-	 * 작업큐에 작업 푸쉬
-	 */
 	public void pushJOB(File file){
 		String[] fileList = file.list();
 
@@ -77,19 +78,18 @@ public class JobMain {
 
 		for (String fileName : fileList) {
 			
-			// ktis 파일 체크 subfix && prefix check
 			boolean checkKTISFile = fileName.startsWith("kt_gis_iud") && fileName.endsWith(".txt");
 			
-			if(checkKTISFile){ // ktis 현행화 파일인것들만 작업목록에 등록한다.
+			if(checkKTISFile){ 
 				HashMap<String,String> params = new HashMap<String, String>();
 				String absolutePath = ktis_db_path+fileName;
 				params.put("file_name", absolutePath);
 
 				int count = jobMapper.selectJobQueueCount(params);
 
-				if(count==0){ // 같은 파일이름으로 등록된 잡이 없을경우만
-					jobMapper.insertJobQueue(params); //db에 job 등록
-					log.info("["+absolutePath+"] ktis 잡등록");
+				if(count==0){
+					jobMapper.insertJobQueue(params); 
+					log.info("["+absolutePath+"] ktis file job regster..");
 				}
 			}
 		}
@@ -99,46 +99,49 @@ public class JobMain {
 
 	}
 
-	/**
-	 * 작업큐에 작업 팝
-	 * 미작업된 job만 가져옴 
-	 */
 	public LinkedList<HashMap> popJOBList(){
 		SqlSession session = getSessionFactory();
 		JobMapper jobMapper = session.getMapper(JobMapper.class);
 
 		LinkedList<HashMap> jobList = jobMapper.selectJobQueueList(null);
 
-		log.debug("현행화 되지않은 ktis DB파일 갯수 : "+jobList.size() +", ["+jobList.toString()+"]");
+		log.debug("get incompleate Job ListInfo : "+jobList.size() +", ["+jobList.toString()+"]");
 
 		session.commit();
 		session.close();
 		return jobList;
 	}
-	
 
-	/**
-	 * 파일에서 한라인씩 읽어 ktis DB현행화
-	 */
 	public void syncKtisDB(LinkedList<HashMap> jobList){
 
 		SqlSession session = getSessionFactory();
 		JobMapper jobMapper = session.getMapper(JobMapper.class);
+		HashMap<String,String> params = null;
 
 		for (HashMap map : jobList) {
 			int seq = (Integer)map.get("seq");
 			String file_name = (String)map.get("file_name");
 			
 			long startTime = System.currentTimeMillis();
-			log.info("["+file_name+"] 현행화 작업시작");
+			log.info("["+file_name+"] job start..");
 
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(file_name));
 				String entities;
 				while ((entities = br.readLine()) != null) {
+					
+/*					String charSet[] = {"utf-8","euc-kr","8859_1"};
 
-					log.debug("file : "+file_name+", line : "+entities);
-					String attrs[] = entities.split("\\|");	// 구분자 |
+					for(int i = 0; i < charSet.length; i++) {
+					    for(int j = 0; j < charSet.length; j++) {
+					     System.out.println(charSet[i] + " to " + charSet[j] + " = " + new String(entities.getBytes(charSet[i]),charSet[j]));
+					    }
+					}
+					
+					entities = new String(entities.getBytes("euc-kr"),"utf-8");
+*/					log.debug("file : "+file_name+", line : "+entities);
+//					System.exit(1);
+					String attrs[] = entities.split("\\|");	
 
 					String iud = attrs[0].trim();
 					String sysdate = attrs[1].trim();
@@ -153,13 +156,13 @@ public class JobMain {
 					String addr_type = attrs[10].trim();
 					String bunji = attrs[11].trim();
 					String ho = attrs[12].trim();
-					String tel = attrs[13].trim()+"-"+attrs[14].trim(); // 전화번호 합치기 
+					String tel = attrs[13].trim()+"-"+attrs[14].trim(); 
 					String yp = attrs[15].trim();
 					String sese_name = attrs[16].trim();
 					String calllink_gubun1 = attrs[17].trim();
 					String calllink_gubun2 = attrs[18].trim();
 
-					HashMap<String,String> params = new HashMap<String,String>();
+					params = new HashMap<String,String>();
 					params.put("iud", iud);
 					params.put("sysdate", sysdate);
 					params.put("pubname", pubname);
@@ -180,29 +183,30 @@ public class JobMain {
 					params.put("calllink_gubun2", calllink_gubun2);
 
 
-					int count = jobMapper.selectKTISCount(params); // 전화번호로 조회하여 등록유무 판단
+					int count = jobMapper.selectKTISCount(params); 
 					
 					
 					if(count == 0){
 						jobMapper.insertKTIS(params);
-						log.debug("등록 ["+params+"]");
+						log.debug("insert job ["+params+"]");
 					}else
 						jobMapper.updateKTIS(params);
-						log.debug("수정 ["+params+"]");
+						log.debug("update job["+params+"]");
 					}
 				
 				br.close();
 			} catch (Exception e) {
-				e.printStackTrace();
+				log.error("params ["+params+"]");
+				log.error(e,e);
 			}finally{
-				completeJOB(map);	//  작업완료시 잡의 상태를 완료상태로 변경 or 파일 백업 디렉토리로 이동 
+				completeJOB(map);	 
 
 				session.commit();
 //				session.close();
 				
 				long endTime = System.currentTimeMillis();
 				
-				log.info("["+file_name+"] 현행화 작업 종료 ("+(endTime - startTime)+" ms)");
+				log.info("["+file_name+"] job end.. duration time ("+(endTime - startTime)+" ms)");
 
 			}
 
@@ -210,9 +214,6 @@ public class JobMain {
 	}
 
 
-	/**
-	 * 작업완료시 잡의 상태를 완료상태로 변경 or 파일 백업 디렉토리로 이동 
-	 */
 	public void completeJOB(HashMap map){
 		int seq = (Integer)map.get("seq");
 		String file_name = (String)map.get("file_name");
@@ -223,21 +224,20 @@ public class JobMain {
 
 		HashMap<String,Object> params = new HashMap<String,Object>();
 		params.put("seq", seq);
-		jobMapper.updateJobQueue(params); // 작업 완료 상태 업데이트
+		jobMapper.updateJobQueue(params); 
 
-		log.info("Job seq ["+seq+"] -> 완료 상태 업데이트");
+		log.info("Job seq ["+seq+"] -> job status compleate");
 
 		session.commit();
 		session.close();
 
-		// backup 디렉토리로 파일 이동
 		String back_file_name = "backup-"+file_name.substring(file_name.lastIndexOf("/")+1);
 		FileUtils.fileMove(file_name, ktis_backup_path+back_file_name);
 
-		log.info("["+file_name+"] 백업 디렉토리로 이동");
+		log.info("["+file_name+"] move to backup directory");
 	}
 
-	public static void main(String[] args)throws Exception {
+	public static void main(String[] args) {
 		JobMain job = new JobMain();
 		job.executeTask();
 	}
